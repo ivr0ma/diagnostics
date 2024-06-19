@@ -97,7 +97,7 @@ public:
     std::string name,
     const diagnostic_updater::FrequencyStatusParam & freq,
     const rclcpp::Clock::SharedPtr & clock = std::make_shared<rclcpp::Clock>())
-  : CompositeDiagnosticTask(name + " topic status"), freq_(freq, clock)
+  : CompositeDiagnosticTask(name + " topic status"), freq_(freq, name, clock)
   {
     addTask(&freq_);
   }
@@ -149,7 +149,7 @@ public:
     const diagnostic_updater::TimeStampStatusParam & stamp,
     const rclcpp::Clock::SharedPtr & clock = std::make_shared<rclcpp::Clock>())
   : HeaderlessTopicDiagnostic(name, freq, clock),
-    stamp_(stamp, clock),
+    stamp_(stamp, name, clock),
     error_logger_(rclcpp::get_logger("TopicDiagnostic_error_logger"))
   {
     addTask(&stamp_);
@@ -215,8 +215,9 @@ public:
   DiagnosedPublisher(
     const typename PublisherT::SharedPtr & pub,
     const diagnostic_updater::FrequencyStatusParam & freq,
-    const diagnostic_updater::TimeStampStatusParam & stamp)
-  : TopicDiagnostic(pub->get_topic_name(), freq, stamp),
+    const diagnostic_updater::TimeStampStatusParam & stamp,
+    const std::string & name = "")
+  : TopicDiagnostic(name.empty() ? pub->get_topic_name() : name, freq, stamp),
     publisher_(pub)
   {
     static_assert(has_header<MessageT>::value, "Message type has to have a header.");

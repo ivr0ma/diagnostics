@@ -119,6 +119,7 @@ private:
   std::mutex lock_;
   rclcpp::Logger debug_logger_;
   const rclcpp::Clock::SharedPtr clock_ptr_;
+  std::string name_;
 
 public:
   /**
@@ -129,7 +130,7 @@ public:
     const FrequencyStatusParam & params,
     std::string name,
     const rclcpp::Clock::SharedPtr & clock = std::make_shared<rclcpp::Clock>())
-  : DiagnosticTask(name), params_(params), times_(params_.window_size_),
+  : DiagnosticTask(name), name_(name), params_(params), times_(params_.window_size_),
     seq_nums_(params_.window_size_),
     debug_logger_(rclcpp::get_logger("FrequencyStatus_debug_logger")),
     clock_ptr_(clock)
@@ -190,30 +191,30 @@ public:
     hist_indx_ = (hist_indx_ + 1) % params_.window_size_;
 
     if (events == 0) {
-      stat.summary(2, "No events recorded.");
+      stat.summary(2, name_+": No events recorded.");
     } else if (freq < *params_.min_freq_ * (1 - params_.tolerance_)) {
-      stat.summary(1, "Frequency too low.");
+      stat.summary(1, name_+": Frequency too low.");
     } else if (freq > *params_.max_freq_ * (1 + params_.tolerance_)) {
-      stat.summary(1, "Frequency too high.");
+      stat.summary(1, name_+": Frequency too high.");
     } else {
-      stat.summary(0, "Desired frequency met");
+      stat.summary(0, name_+": Desired frequency met");
     }
 
     // stat.addf("Events in window", "%d", events);
     // stat.addf("Events since startup", "%d", count_);
     // stat.addf("Duration of window (s)", "%f", window);
-    stat.addf("Actual frequency (Hz)", "%f", freq);
+    stat.addf(name_+": Actual frequency (Hz)", "%f", freq);
     if (*params_.min_freq_ == *params_.max_freq_) {
-      stat.addf("Target frequency (Hz)", "%f", *params_.min_freq_);
+      stat.addf(name_+": Target frequency (Hz)", "%f", *params_.min_freq_);
     }
     if (*params_.min_freq_ > 0) {
       stat.addf(
-        "Minimum acceptable frequency (Hz)", "%f",
+        name_+": Minimum acceptable frequency (Hz)", "%f",
         *params_.min_freq_ * (1 - params_.tolerance_));
     }
     if (std::isfinite(*params_.max_freq_)) {
       stat.addf(
-        "Maximum acceptable frequency (Hz)", "%f",
+        name_+": Maximum acceptable frequency (Hz)", "%f",
         *params_.max_freq_ * (1 + params_.tolerance_));
     }
   }
@@ -295,7 +296,7 @@ public:
     const TimeStampStatusParam & params,
     std::string name,
     const rclcpp::Clock::SharedPtr & clock = std::make_shared<rclcpp::Clock>())
-  : DiagnosticTask(name), params_(params), clock_ptr_(clock)
+  : DiagnosticTask(name), name_(name), params_(params), clock_ptr_(clock)
   {
     init();
   }
@@ -365,34 +366,34 @@ public:
   {
     std::unique_lock<std::mutex> lock(lock_);
 
-    stat.summary(0, "Timestamps are reasonable.");
+    stat.summary(0, name_+": Timestamps are reasonable.");
     if (!deltas_valid_) {
-      stat.summary(1, "No data since last update.");
+      stat.summary(1, name_+": No data since last update.");
     } else {
       if (min_delta_ < params_.min_acceptable_) {
-        stat.summary(2, "Timestamps too far in future seen.");
+        stat.summary(2, name_+": Timestamps too far in future seen.");
         early_count_++;
       }
 
       if (max_delta_ > params_.max_acceptable_) {
-        stat.summary(2, "Timestamps too far in past seen.");
+        stat.summary(2, name_+": Timestamps too far in past seen.");
         late_count_++;
       }
 
       if (zero_seen_) {
-        stat.summary(2, "Zero timestamp seen.");
+        stat.summary(2, name_+": Zero timestamp seen.");
         zero_count_++;
       }
 
       if (isTimeJump()) {
-        stat.summary(2, "Time jump detected.");
+        stat.summary(2, name_+": Time jump detected.");
       }
 
     }
 
-    stat.addf("Earliest timestamp delay:", "%f", min_delta_);
-    stat.addf("Latest timestamp delay:", "%f", max_delta_);
-    stat.addf("Time jump:", "%f", getTimeJump());
+    stat.addf(name_+": Earliest timestamp delay:", "%f", min_delta_);
+    stat.addf(name_+": Latest timestamp delay:", "%f", max_delta_);
+    stat.addf(name_+": Time jump:", "%f", getTimeJump());
     // stat.addf(
     //   "Earliest acceptable timestamp delay:", "%f",
     //   params_.min_acceptable_);
@@ -432,6 +433,8 @@ private:
 
   double prev_timestamp_;
   double cur_timestamp_;
+
+  std::string name_;
 };
 
 /**

@@ -199,9 +199,9 @@ public:
       stat.summary(0, "Desired frequency met");
     }
 
-    stat.addf("Events in window", "%d", events);
-    stat.addf("Events since startup", "%d", count_);
-    stat.addf("Duration of window (s)", "%f", window);
+    // stat.addf("Events in window", "%d", events);
+    // stat.addf("Events since startup", "%d", count_);
+    // stat.addf("Duration of window (s)", "%f", window);
     stat.addf("Actual frequency (Hz)", "%f", freq);
     if (*params_.min_freq_ == *params_.max_freq_) {
       stat.addf("Target frequency (Hz)", "%f", *params_.min_freq_);
@@ -232,8 +232,10 @@ struct TimeStampStatusParam
 
   TimeStampStatusParam(
     const double min_acceptable = -1,
-    const double max_acceptable = 5)
-  : max_acceptable_(max_acceptable), min_acceptable_(min_acceptable) {}
+    const double max_acceptable = 5,
+    const double jump_min_diff = 0.0,
+    const double jump_max_diff = 5.0)
+  : max_acceptable_(max_acceptable), min_acceptable_(min_acceptable), jump_min_diff_(jump_min_diff), jump_max_diff_(jump_max_diff) {}
 
   /**
    * \brief Maximum acceptable difference between two timestamps.
@@ -246,6 +248,9 @@ struct TimeStampStatusParam
    */
 
   double min_acceptable_;
+
+  double jump_min_diff_;
+  double jump_max_diff_;
 };
 
 /**
@@ -342,6 +347,9 @@ public:
       }
 
       deltas_valid_ = true;
+
+      prev_timestamp_ = cur_timestamp_;
+      cur_timestamp_ = stamp;
     }
   }
 
@@ -375,19 +383,25 @@ public:
         stat.summary(2, "Zero timestamp seen.");
         zero_count_++;
       }
+
+      if (isTimeJump()) {
+        stat.summary(2, "Time jump detected.");
+      }
+
     }
 
     stat.addf("Earliest timestamp delay:", "%f", min_delta_);
     stat.addf("Latest timestamp delay:", "%f", max_delta_);
-    stat.addf(
-      "Earliest acceptable timestamp delay:", "%f",
-      params_.min_acceptable_);
-    stat.addf(
-      "Latest acceptable timestamp delay:", "%f",
-      params_.max_acceptable_);
-    stat.add("Late diagnostic update count:", late_count_);
-    stat.add("Early diagnostic update count:", early_count_);
-    stat.add("Zero seen diagnostic update count:", zero_count_);
+    stat.addf("Time jump:", "%f", getTimeJump());
+    // stat.addf(
+    //   "Earliest acceptable timestamp delay:", "%f",
+    //   params_.min_acceptable_);
+    // stat.addf(
+    //   "Latest acceptable timestamp delay:", "%f",
+    //   params_.max_acceptable_);
+    // stat.add("Late diagnostic update count:", late_count_);
+    // stat.add("Early diagnostic update count:", early_count_);
+    // stat.add("Zero seen diagnostic update count:", zero_count_);
 
     deltas_valid_ = false;
     min_delta_ = 0;
@@ -396,6 +410,15 @@ public:
   }
 
 private:
+  double getTimeJump() {
+    return cur_timestamp_ - prev_timestamp_;
+  }
+
+  bool isTimeJump() {
+    double dt = getTimeJump();
+    return dt <= params_.jump_min_diff_ || dt >= params_.jump_max_diff_;
+  }
+
   TimeStampStatusParam params_;
   int early_count_;
   int late_count_;
@@ -406,6 +429,9 @@ private:
   bool deltas_valid_;
   const rclcpp::Clock::SharedPtr clock_ptr_;
   std::mutex lock_;
+
+  double prev_timestamp_;
+  double cur_timestamp_;
 };
 
 /**

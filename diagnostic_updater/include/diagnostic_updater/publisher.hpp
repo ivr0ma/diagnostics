@@ -86,9 +86,6 @@ public:
    *
    * \param name The name of the topic that is being diagnosed.
    *
-   * \param diag The diagnostic_updater that the CompositeDiagnosticTask
-   * should add itself to.
-   *
    * \param freq The parameters for the FrequencyStatus class that will be
    * computing statistics.
    *
@@ -97,13 +94,12 @@ public:
    */
 
   HeaderlessTopicDiagnostic(
-    std::string name, diagnostic_updater::Updater & diag,
+    std::string name,
     const diagnostic_updater::FrequencyStatusParam & freq,
     const rclcpp::Clock::SharedPtr & clock = std::make_shared<rclcpp::Clock>())
   : CompositeDiagnosticTask(name + " topic status"), freq_(freq, clock)
   {
     addTask(&freq_);
-    diag.add(*this);
   }
 
   virtual ~HeaderlessTopicDiagnostic() {}
@@ -137,9 +133,6 @@ public:
    *
    * \param name The name of the topic that is being diagnosed.
    *
-   * \param diag The diagnostic_updater that the CompositeDiagnosticTask
-   * should add itself to.
-   *
    * \param freq The parameters for the FrequencyStatus class that will be
    * computing statistics.
    *
@@ -151,11 +144,11 @@ public:
    */
 
   TopicDiagnostic(
-    std::string name, diagnostic_updater::Updater & diag,
+    std::string name,
     const diagnostic_updater::FrequencyStatusParam & freq,
     const diagnostic_updater::TimeStampStatusParam & stamp,
     const rclcpp::Clock::SharedPtr & clock = std::make_shared<rclcpp::Clock>())
-  : HeaderlessTopicDiagnostic(name, diag, freq, clock),
+  : HeaderlessTopicDiagnostic(name, freq, clock),
     stamp_(stamp, clock),
     error_logger_(rclcpp::get_logger("TopicDiagnostic_error_logger"))
   {
@@ -210,9 +203,6 @@ public:
    *
    * \param pub The publisher on which statistics are being collected.
    *
-   * \param diag The diagnostic_updater that the CompositeDiagnosticTask
-   * should add itself to.
-   *
    * \param freq The parameters for the FrequencyStatus class that will be
    * computing statistics.
    *
@@ -224,10 +214,9 @@ public:
 
   DiagnosedPublisher(
     const typename PublisherT::SharedPtr & pub,
-    diagnostic_updater::Updater & diag,
     const diagnostic_updater::FrequencyStatusParam & freq,
     const diagnostic_updater::TimeStampStatusParam & stamp)
-  : TopicDiagnostic(pub->get_topic_name(), diag, freq, stamp),
+  : TopicDiagnostic(pub->get_topic_name(), freq, stamp),
     publisher_(pub)
   {
     static_assert(has_header<MessageT>::value, "Message type has to have a header.");

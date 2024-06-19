@@ -216,7 +216,7 @@ int main(int argc, char ** argv)
   double min_freq = 0.5;  // If you update these values, the
   double max_freq = 2;  // HeaderlessTopicDiagnostic will use the new values.
   diagnostic_updater::HeaderlessTopicDiagnostic pub1_freq(
-    "topic1", updater,
+    "topic1",
     diagnostic_updater::FrequencyStatusParam(&min_freq, &max_freq, 0.1, 10));
 
   // Note that TopicDiagnostic, HeaderlessDiagnosedPublisher,
